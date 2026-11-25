@@ -1,0 +1,34 @@
+Package: SkosmosR
+Title: A General R Client for Skosmos REST APIs
+Version: 0.1.0
+Date: 2026-09-28
+Authors@R: c(
+    person("Akewak", "Jeba", , "akewak84@gmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0009-0007-1347-7552")),
+    person("Leo", "Lahti", , "leo.lahti@iki.fi", role = "aut",
+           comment = c(ORCID = "0000-0001-5537-637X"))
+  )
+Description: A general-purpose client for Skosmos REST APIs. Provides tools to
+    discover vocabularies, search and look up concepts, browse semantic
+    relationships, retrieve statistics and indexes, inspect recently changed
+    concepts, and download RDF data from any standards-compatible Skosmos
+    instance. Client configuration supports custom endpoints, headers,
+    authentication tokens, timeouts, retries, and user agents.
+License: BSD_2_clause + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Imports:
+    httr2,
+    tibble
+Suggests:
+    testthat (>= 3.0.0),
+    rdflib,
+    knitr,
+    rmarkdown
+Config/testthat/edition: 3
+VignetteBuilder: knitr
+URL: https://github.com/ake123/SkosmosR
+BugReports: https://github.com/ake123/SkosmosR/issues
+Roxygen: list(markdown = TRUE)
+Depends: R (>= 4.1.0)
+Config/roxygen2/version: 8.0.0

@@ -1,0 +1,407 @@
+---
+title: "Getting started with SkosmosR"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with SkosmosR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+`SkosmosR` is a provider-independent R client for the Skosmos REST API v1.
+High-level JSON-returning functions return **tibbles**. Nested Skosmos objects
+are retained as list-columns where flattening would lose information. RDF
+functions return RDF text/raw data or an `rdflib` graph, and
+`skosmos_request()` remains a low-level escape hatch that returns the original
+JSON structure.
+
+```{r setup, eval=FALSE}
+library(SkosmosR)
+```
+
+## 1. Finto: basic workflow
+
+```{r finto, eval=FALSE}
+finto <- skosmos_client("https://api.finto.fi/rest/v1/")
+
+skosmos_ping(finto)
+
+vocabs <- skosmos_vocabularies(finto, lang = "en")
+class(vocabs)
+vocabs
+
+skosmos_vocabulary(finto, "yso", lang = "en")
+
+hits <- skosmos_search(
+  finto,
+  query = "forest",
+  vocabs = "yso",
+  lang = "en",
+  maxhits = 10
+)
+hits
+
+skosmos_vocabulary_search(
+  finto,
+  vocid = "yso",
+  query = "forest",
+  lang = "en",
+  maxhits = 10
+)
+
+skosmos_lookup(finto, "yso", label = "cat", lang = "en")
+skosmos_types(finto, lang = "en")
+skosmos_top_concepts(finto, "yso", lang = "en")
+skosmos_groups(finto, "yso", lang = "en")
+skosmos_vocabulary_statistics(finto, "yso", lang = "en")
+skosmos_label_statistics(finto, "yso", lang = "en")
+skosmos_index_letters(finto, "yso", lang = "en")
+skosmos_index(finto, "yso", letter = "A", lang = "en")
+```
+
+### Concept relationships
+
+```{r finto-concept, eval=FALSE}
+cosmology <- skosmos_concept(
+  finto,
+  vocid = "yso",
+  uri = "http://www.yso.fi/onto/yso/p7160"
+)
+
+skosmos_label(cosmology, "en")
+skosmos_broader(cosmology, "en")
+skosmos_broader_transitive(cosmology, "en")
+skosmos_narrower(cosmology, "en")
+skosmos_narrower_transitive(cosmology, "en")
+skosmos_related(cosmology, "en")
+skosmos_children(cosmology, "en")
+skosmos_hierarchy(cosmology, "en")
+skosmos_mappings(cosmology, "en")
+```
+
+### RDF access
+
+```{r finto-rdf, eval=FALSE}
+skosmos_data(
+  finto,
+  uri = "http://www.yso.fi/onto/yso/p7160",
+  vocid = "yso",
+  format = "text/turtle"
+)
+
+skosmos_vocabulary_data(
+  finto,
+  vocid = "yso",
+  format = "text/turtle"
+)
+
+skosmos_concept_data(
+  cosmology,
+  format = "application/ld+json"
+)
+```
+
+## 2. Public Skosmos instances used as compatibility examples
+
+`skosmos_instances()` contains a convenience registry. It is intentionally not
+presented as an exhaustive worldwide census because Skosmos is self-hosted and
+public installations can move or disappear.
+
+```{r registry, eval=FALSE}
+skosmos_instances()
+skosmos_test_registry()
+```
+
+The same code pattern works for each installation:
+
+```{r generic-pattern, eval=FALSE}
+client <- skosmos_client("https://example.org/rest/v1/")
+skosmos_vocabularies(client, lang = "en")
+skosmos_search(client, query = "data", lang = "en", maxhits = 5)
+```
+
+### Finto — National Library of Finland
+
+```{r example-finto, eval=FALSE}
+client <- skosmos_client("https://api.finto.fi/rest/v1/")
+skosmos_vocabularies(client, "en")
+skosmos_vocabulary_search(client, "yso", "forest", lang = "en")
+```
+
+### UNESCO Vocabulary Services
+
+```{r example-unesco, eval=FALSE}
+client <- skosmos_client("https://vocabularies.unesco.org/rest/v1/")
+v <- skosmos_vocabularies(client, "en")
+v
+
+# Use an ID returned by the server; on the UNESCO service the thesaurus is
+# commonly exposed under the UNESCO vocabulary identifier.
+skosmos_search(client, "education", lang = "en", maxhits = 10)
+```
+
+### FAO AGROVOC
+
+```{r example-agrovoc, eval=FALSE}
+client <- skosmos_client("https://agrovoc.fao.org/browse/rest/v1/")
+skosmos_vocabularies(client, "en")
+skosmos_search(client, "forest", lang = "en", maxhits = 10)
+
+agrovoc_concept <- skosmos_concept(
+  client,
+  vocid = "agrovoc",
+  uri = "http://aims.fao.org/aos/agrovoc/c_3077"
+)
+skosmos_label(agrovoc_concept, "en")
+skosmos_broader(agrovoc_concept, "en")
+```
+
+### NFFA-Europe MetaRepo / PRIMA
+
+```{r example-nffa, eval=FALSE}
+client <- skosmos_client("https://metarepo.nffa.eu/skosmos/rest/v1/")
+skosmos_vocabularies(client, "en")
+skosmos_vocabulary(client, "prima", "en")
+skosmos_vocabulary_search(client, "prima", "instrument", lang = "en")
+
+instrument <- skosmos_concept(
+  client,
+  "prima",
+  "https://purls.helmholtz-metadaten.de/skosmos/prima/instrument"
+)
+skosmos_broader(instrument, "en")
+skosmos_narrower(instrument, "en")
+```
+
+### MET Norway Vocabulary Service
+
+The Skosmos user interface is rooted at `https://vocab.met.no/`, while the
+REST documentation is linked separately by the service. Do not infer the REST
+path from its SPARQL path.
+
+```{r example-metno, eval=FALSE}
+client <- skosmos_client("https://vocab.met.no/rest/v1/")
+skosmos_ping(client)
+v <- skosmos_vocabularies(client, "en")
+v
+
+# Example vocabulary visible in the service:
+skosmos_vocabulary(client, "CFSTDN", lang = "en")
+skosmos_vocabulary_search(
+  client,
+  "CFSTDN",
+  query = "air_temperature",
+  lang = "en",
+  maxhits = 10
+)
+```
+
+### ILC4CLARIN / CNR
+
+This is a particularly useful compatibility target because it exposes many
+vocabularies. The following endpoint has been successfully exercised with
+`skosmos_ping()` and `skosmos_vocabularies()`.
+
+```{r example-ilc4clarin, eval=FALSE}
+client <- skosmos_client(
+  "https://vocabs.ilc4clarin.ilc.cnr.it/skosmos/rest/v1/"
+)
+
+vocabs <- skosmos_vocabularies(client, "en")
+vocabs
+
+# Select one vocabulary ID, not the whole vector.
+vocid <- vocabs$id[1]
+skosmos_vocabulary(client, vocid, "en")
+
+skosmos_vocabulary(client, "agroterm", "en")
+skosmos_vocabulary(client, "echoes_glossary", "en")
+skosmos_vocabulary(client, "multilingual_architecture", "en")
+```
+
+To test every vocabulary returned by an installation:
+
+```{r loop-vocabularies, eval=FALSE}
+results <- lapply(vocabs$id, function(vocid) {
+  tryCatch(
+    {
+      skosmos_vocabulary(client, vocid, "en")
+      tibble::tibble(vocid = vocid, status = "PASS", error = NA_character_)
+    },
+    error = function(e) {
+      tibble::tibble(
+        vocid = vocid,
+        status = "FAIL",
+        error = conditionMessage(e)
+      )
+    }
+  )
+})
+
+do.call(rbind, results)
+```
+
+### CLARIN CLAVAS
+
+```{r example-clarin, eval=FALSE}
+client <- skosmos_client(
+  "https://vocabularies.clarin.eu/clavas/rest/v1/"
+)
+skosmos_vocabularies(client, "en")
+skosmos_search(client, "language", lang = "en", maxhits = 10)
+```
+
+### Loterre / INIST-CNRS
+
+```{r example-loterre, eval=FALSE}
+client <- skosmos_client("https://skosmos.loterre.fr/rest/v1/")
+skosmos_vocabularies(client, "en")
+skosmos_search(client, "science", lang = "en", maxhits = 10)
+```
+
+### ACTRIS / NILU
+
+```{r example-actris, eval=FALSE}
+client <- skosmos_client(
+  "https://vocabulary.actris.nilu.no/skosmos/rest/v1/"
+)
+skosmos_vocabularies(client, "en")
+skosmos_search(client, "atmosphere", lang = "en", maxhits = 10)
+```
+
+### ZPID / Leibniz Institute for Psychology
+
+```{r example-zpid, eval=FALSE}
+client <- skosmos_client(
+  "https://vocabs.leibniz-psychology.org/rest/v1/"
+)
+skosmos_vocabularies(client, "en")
+skosmos_search(client, "psychology", lang = "en", maxhits = 10)
+```
+
+### University of Oslo Library
+
+```{r example-uio, eval=FALSE}
+client <- skosmos_client(
+  "https://data.ub.uio.no/skosmos/rest/v1/"
+)
+skosmos_vocabularies(client, "en")
+skosmos_search(client, "history", lang = "en", maxhits = 10)
+```
+
+### University of Bologna /DH.arc
+
+```{r example-dharc, eval=FALSE}
+client <- skosmos_client(
+  "https://lab.dharc.unibo.it/skosmos/rest/v1/"
+)
+skosmos_vocabularies(client, "en")
+skosmos_search(client, "art", lang = "en", maxhits = 10)
+```
+
+### BARTOC Skosmos
+
+BARTOC operates a Skosmos-based terminology service and exposes many
+individual vocabularies. Because BARTOC vocabulary-facing URLs and deployment
+paths may differ from a single canonical REST root, discover or confirm the
+REST v1 endpoint for the selected BARTOC vocabulary before constructing the
+client. Once confirmed, the usage is identical:
+
+```{r example-bartoc, eval=FALSE}
+bartoc <- skosmos_client("https://CONFIRMED-BARTOC-SKOSMOS/rest/v1/")
+skosmos_vocabularies(bartoc, "en")
+skosmos_search(bartoc, "education", lang = "en")
+```
+
+Examples discussed during package testing include BARTOC-hosted entries for
+UNBIS, TheSoz, RBMS, ADMS and other controlled vocabularies. They are useful
+additional vocabulary-level targets, but they should not be hard-coded as
+independent API servers unless their REST root has been confirmed.
+
+## 3. Complete Skosmos REST v1 coverage in SkosmosR
+
+The high-level package interface covers the standard global, vocabulary and
+concept operations discussed in the Skosmos REST v1 API.
+
+### Global operations
+
+```{r api-global, eval=FALSE}
+skosmos_vocabularies(client)
+skosmos_search(client, query = "term")
+skosmos_label_uri(client, uri = "https://example.org/concept/1")
+skosmos_types(client)
+skosmos_data(client, uri = "https://example.org/concept/1")
+```
+
+### Vocabulary operations
+
+```{r api-vocabulary, eval=FALSE}
+skosmos_vocabulary(client, "vocid")
+skosmos_types(client, vocid = "vocid")
+skosmos_top_concepts(client, "vocid")
+skosmos_vocabulary_data(client, "vocid")
+skosmos_vocabulary_search(client, "vocid", "term")
+skosmos_lookup(client, "vocid", "label")
+skosmos_vocabulary_statistics(client, "vocid")
+skosmos_label_statistics(client, "vocid")
+skosmos_index_letters(client, "vocid")
+skosmos_index(client, "vocid", "A")
+skosmos_groups(client, "vocid")
+skosmos_new_concepts(client, "vocid")
+skosmos_modified_concepts(client, "vocid")
+```
+
+### Concept operations
+
+```{r api-concept, eval=FALSE}
+concept <- skosmos_concept(client, "vocid", "https://example.org/concept/1")
+
+skosmos_concept_data(concept)
+skosmos_label(concept)
+skosmos_broader(concept)
+skosmos_broader_transitive(concept)
+skosmos_narrower(concept)
+skosmos_narrower_transitive(concept)
+skosmos_related(concept)
+skosmos_children(concept)
+skosmos_group_members(concept)
+skosmos_hierarchy(concept)
+skosmos_mappings(concept)
+```
+
+If a Skosmos installation has a deployment-specific extension not represented
+by a high-level helper, use `skosmos_request()` without losing access to that
+server functionality:
+
+```{r low-level, eval=FALSE}
+skosmos_request(
+  client,
+  path = "vocid/customRoute",
+  query = list(lang = "en")
+)
+```
+
+## 4. Tibbles and nested responses
+
+High-level JSON methods return tibbles:
+
+```{r tibbles, eval=FALSE}
+x <- skosmos_vocabularies(finto, "en")
+class(x)
+# c("tbl_df", "tbl", "data.frame")
+```
+
+Simple arrays become one-column tibbles. Arrays of concepts become ordinary
+multi-column tibbles. Nested JSON structures are retained as list-columns so
+that hierarchy and mapping information is not discarded.
+
+`skosmos_request()` intentionally returns the original parsed JSON object for
+advanced users who need the exact server payload.
+
+## 5. APIs discussed that are not Skosmos REST APIs
+
+Not every vocabulary/data API is a Skosmos API. In particular,
+`https://data.unesco.org/api/explore/v2.1/` is an Opendatasoft Explore API and
+should not be used as a SkosmosR compatibility target. The OpenAIRE/Zenodo API
+mapping publication discussed alongside this project is useful background on
+terminology-service interoperability, but OpenAIRE itself is not a Skosmos
+REST endpoint.
